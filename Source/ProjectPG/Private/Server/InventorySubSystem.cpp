@@ -2,6 +2,8 @@
 #include "Server/WebSocketSubSystem.h"
 #include "Dom/JsonObject.h"
 #include "Core/ItemSubSystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameMode/GameMode_InLobby.h"
 
 UInventorySubSystem* UInventorySubSystem::Get(UWorld* World)
 {
@@ -143,9 +145,24 @@ void UInventorySubSystem::HandleInventoryMessage(const FString& MessageType, TSh
 				{
 					Item.bEquip = (IsEquippedInt == 1);
 				}
-				if (ItemObject->HasField(TEXT("bIsRotated")))
+				// bIsRotated: 서버에서 여러 형태로 보낼 수 있으므로 유연하게 처리
+				bool TempBool = false;
+				double TempNum = 0.0;
+				if (ItemObject->TryGetBoolField(TEXT("bIsRotated"), TempBool))
 				{
-					Item.bIsRotated = ItemObject->GetBoolField(TEXT("bIsRotated"));
+					Item.bIsRotated = TempBool;
+				}
+				else if (ItemObject->TryGetBoolField(TEXT("is_rotate"), TempBool))
+				{
+					Item.bIsRotated = TempBool;
+				}
+				else if (ItemObject->TryGetNumberField(TEXT("is_rotate"), TempNum))
+				{
+					Item.bIsRotated = (TempNum != 0.0);
+				}
+				else if (ItemObject->TryGetNumberField(TEXT("is_rotated"), TempNum))
+				{
+					Item.bIsRotated = (TempNum != 0.0);
 				}
 
 				if (UItemSubSystem* subSystem = UItemSubSystem::Get(GetWorld()))
@@ -190,38 +207,57 @@ void UInventorySubSystem::HandleInventoryMessage(const FString& MessageType, TSh
 
 void UInventorySubSystem::RequestGetInventory()
 {
-	if (UWebSocketSubSystem* WS = UWebSocketSubSystem::Get(GetWorld()))
+	// 로비 모드일 때만 WebSocket으로 요청 전송
+	if (!GetWorld()) return;
+	AGameModeBase* GM = UGameplayStatics::GetGameMode(GetWorld());
+	if (GM && GM->IsA(AGameMode_InLobby::StaticClass()))
 	{
-		TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
-		WS->SendJsonMessage(TEXT("GET_INVENTORY"), Payload);
+		if (UWebSocketSubSystem* WS = UWebSocketSubSystem::Get(GetWorld()))
+		{
+			TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
+			WS->SendJsonMessage(TEXT("GET_INVENTORY"), Payload);
+		}
 	}
 }
 
 void UInventorySubSystem::RequestMoveItem(const FGuid& FromInventoryGuid, const FGuid& ToInventoryGuid, const FGuid& ItemGuid, const FIntPoint& TargetPosition, bool bIsRotated)
 {
-	if (UWebSocketSubSystem* WS = UWebSocketSubSystem::Get(GetWorld()))
+	// 로비 모드일 때만 WebSocket으로 전송. 인게임에서는 로컬 상태만 변경하고 서버 전송 안함
+	if (!GetWorld()) return;
+	AGameModeBase* GM = UGameplayStatics::GetGameMode(GetWorld());
+	if (GM && GM->IsA(AGameMode_InLobby::StaticClass()))
 	{
-		TSharedPtr<FJsonObject> PayloadObject = MakeShared<FJsonObject>();
-		PayloadObject->SetStringField(TEXT("FromInventoryGuid"), FromInventoryGuid.ToString(EGuidFormats::DigitsWithHyphens));
-		PayloadObject->SetStringField(TEXT("ToInventoryGuid"), ToInventoryGuid.ToString(EGuidFormats::DigitsWithHyphens));
-		PayloadObject->SetStringField(TEXT("ItemGuid"), ItemGuid.ToString(EGuidFormats::DigitsWithHyphens));
-		PayloadObject->SetNumberField(TEXT("TargetX"), TargetPosition.X);
-		PayloadObject->SetNumberField(TEXT("TargetY"), TargetPosition.Y);
-		PayloadObject->SetBoolField(TEXT("bIsRotated"), bIsRotated);
+		if (UWebSocketSubSystem* WS = UWebSocketSubSystem::Get(GetWorld()))
+		{
+			TSharedPtr<FJsonObject> PayloadObject = MakeShared<FJsonObject>();
+			PayloadObject->SetStringField(TEXT("FromInventoryGuid"), FromInventoryGuid.ToString(EGuidFormats::DigitsWithHyphens));
+			PayloadObject->SetStringField(TEXT("ToInventoryGuid"), ToInventoryGuid.ToString(EGuidFormats::DigitsWithHyphens));
+			PayloadObject->SetStringField(TEXT("ItemGuid"), ItemGuid.ToString(EGuidFormats::DigitsWithHyphens));
+			PayloadObject->SetNumberField(TEXT("TargetX"), TargetPosition.X);
+			PayloadObject->SetNumberField(TEXT("TargetY"), TargetPosition.Y);
+			PayloadObject->SetBoolField(TEXT("bIsRotated"), bIsRotated);
 
-		WS->SendJsonMessage(TEXT("REQ_MOVE_ITEM"), PayloadObject);
+			WS->SendJsonMessage(TEXT("REQ_MOVE_ITEM"), PayloadObject);
+		}
 	}
 }
 
 void UInventorySubSystem::RequestEquipItem(const FGuid& ItemGuid, const FGuid& TargetParentGuid, bool bIsEquipped)
 {
-	if (UWebSocketSubSystem* WS = UWebSocketSubSystem::Get(GetWorld()))
+	// 로비 모드일 때만 WebSocket으로 전송
+	if (!GetWorld()) return;
+	AGameModeBase* GM = UGameplayStatics::GetGameMode(GetWorld());
+	if (GM && GM->IsA(AGameMode_InLobby::StaticClass()))
 	{
-		TSharedPtr<FJsonObject> PayloadObject = MakeShared<FJsonObject>();
-		PayloadObject->SetStringField(TEXT("ItemGuid"), ItemGuid.ToString(EGuidFormats::DigitsWithHyphens));
-		PayloadObject->SetStringField(TEXT("TargetParentGuid"), TargetParentGuid.ToString(EGuidFormats::DigitsWithHyphens));
-		PayloadObject->SetBoolField(TEXT("bIsEquipped"), bIsEquipped);
+		if (UWebSocketSubSystem* WS = UWebSocketSubSystem::Get(GetWorld()))
+		{
+			TSharedPtr<FJsonObject> PayloadObject = MakeShared<FJsonObject>();
+			PayloadObject->SetStringField(TEXT("ItemGuid"), ItemGuid.ToString(EGuidFormats::DigitsWithHyphens));
+			// 서버가 기대하는 필드명에 맞춰 전송: TargetGuid, bEquip
+			PayloadObject->SetStringField(TEXT("TargetGuid"), TargetParentGuid.ToString(EGuidFormats::DigitsWithHyphens));
+			PayloadObject->SetBoolField(TEXT("bEquip"), bIsEquipped);
 
-		WS->SendJsonMessage(TEXT("REQ_EQUIP_ITEM"), PayloadObject);
+			WS->SendJsonMessage(TEXT("REQ_EQUIP_ITEM"), PayloadObject);
+		}
 	}
 }

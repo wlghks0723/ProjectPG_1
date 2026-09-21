@@ -137,6 +137,11 @@ USpringArmComponent* ACustomPlayerCharacter::GetCameraArm() const
 	return CameraArmComp;
 }
 
+void ACustomPlayerCharacter::Interact()
+{
+
+}
+
 void ACustomPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();

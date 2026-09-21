@@ -37,6 +37,7 @@ public:
 	UCustomAbilitySystemComponent* GetCustomAbilitySystemComponent() const;
 	USpringArmComponent* GetCameraArm() const;
 
+	void Interact();
 protected:
 	virtual void BeginPlay() override;
 };

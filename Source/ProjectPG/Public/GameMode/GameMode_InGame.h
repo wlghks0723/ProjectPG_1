@@ -4,17 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "GameMode_InLobby.generated.h"
+#include "GameMode_InGame.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class PROJECTPG_API AGameMode_InLobby : public AGameModeBase
+class PROJECTPG_API AGameMode_InGame : public AGameModeBase
 {
 	GENERATED_BODY()
-
 public:
-	AGameMode_InLobby();
+	AGameMode_InGame();
+
 	void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage);
+
 };

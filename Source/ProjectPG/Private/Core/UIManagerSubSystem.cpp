@@ -211,6 +211,9 @@ UUserWidget* UUIManagerSubSystem::OpenUI(EUIType UIType)
 		}
 
 		TargetWidget->AddToViewport(ZOrder);
+
+			// Ensure widget is visible in case it was previously collapsed
+			TargetWidget->SetVisibility(ESlateVisibility::Visible);
 	}
 
 	UpdateInputMode();
@@ -372,13 +375,17 @@ void UUIManagerSubSystem::UpdateInputMode()
 	{
 		PC->SetShowMouseCursor(true);
 
-		FInputModeUIOnly InputMode;
+		// Use GameAndUI to avoid focusing non-focusable widgets which
+		// causes "Attempting to focus Non-Focusable widget" errors.
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
 
 		if (UUserWidget** MsgWidget =
 			ActiveWidgets.Find(EUIType::MessagePopup))
 		{
 			if (MsgWidget && *MsgWidget)
 			{
+				// Setting WidgetToFocus can be helpful if the widget supports keyboard focus.
 				InputMode.SetWidgetToFocus(
 					(*MsgWidget)->TakeWidget()
 				);

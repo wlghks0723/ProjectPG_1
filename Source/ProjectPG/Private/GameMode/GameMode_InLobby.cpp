@@ -6,7 +6,10 @@
 #include "UI/ItemDragDropOperation.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include <UI/Controller/LobbyUIFlowController.h>
+AGameMode_InLobby::AGameMode_InLobby()
+{
 
+}
 void AGameMode_InLobby::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
