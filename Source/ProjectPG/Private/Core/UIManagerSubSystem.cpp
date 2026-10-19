@@ -4,7 +4,6 @@
 #include "Core/UIManagerSubSystem.h"
 #include "Blueprint/UserWidget.h"
 #include <Kismet/GameplayStatics.h>
-#include "Audio/PGSoundLibrary.h"
 
 void UUIManagerSubSystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -77,7 +76,6 @@ UUserWidget* UUIManagerSubSystem::OpenDynamicUI(
 			int32 ZOrder = 200;
 
 			NewWidget->AddToViewport(ZOrder);
-			UPGSoundLibrary::PlayPGSound(this, TEXT("UI.Open"), FVector::ZeroVector);
 
 			UpdateInputMode();
 
@@ -99,7 +97,6 @@ void UUIManagerSubSystem::CloseDynamicUI(FGuid guid)
 			if ((*FoundWidget)->IsInViewport())
 			{
 				(*FoundWidget)->RemoveFromParent();
-				UPGSoundLibrary::PlayPGSound(this, TEXT("UI.Close"), FVector::ZeroVector);
 			}
 		}
 
@@ -199,7 +196,6 @@ UUserWidget* UUIManagerSubSystem::OpenUI(EUIType UIType)
 			TargetWidget->AddToViewport(ZOrder);
 			// 뷰포트로 복원할 때 가시성도 확실히 설정
 			TargetWidget->SetVisibility(ESlateVisibility::Visible);
-			if (UIType != EUIType::ItemContext) UPGSoundLibrary::PlayPGSound(this, TEXT("UI.Open"), FVector::ZeroVector);
 		}
 
 		UpdateInputMode();
@@ -236,7 +232,6 @@ UUserWidget* UUIManagerSubSystem::OpenUI(EUIType UIType)
 				}
 				TargetWidget->AddToViewport(ZOrder);
 				TargetWidget->SetVisibility(ESlateVisibility::Visible);
-				if (UIType != EUIType::ItemContext) UPGSoundLibrary::PlayPGSound(this, TEXT("UI.Open"), FVector::ZeroVector);
 			}
 	}
 
@@ -269,7 +264,6 @@ void UUIManagerSubSystem::CloseUI(EUIType UIType)
 			if ((*FoundWidget)->IsInViewport())
 			{
 				(*FoundWidget)->RemoveFromParent();
-				if (UIType != EUIType::ItemContext) UPGSoundLibrary::PlayPGSound(this, TEXT("UI.Close"), FVector::ZeroVector);
 			}
 		}
 	}
